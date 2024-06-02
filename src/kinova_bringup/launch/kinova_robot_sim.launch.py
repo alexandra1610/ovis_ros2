@@ -91,13 +91,34 @@ def generate_launch_description():
         parameters=[ros2_controllers_path],
         output="both",
     )
-    joint_state_controller = Node(
+    joint_trajectory_controller = Node(
         package="controller_manager",
         executable="spawner",
         arguments=[
-            "joint_state_controller",
+            "joint_trajectory_controller",
+            "--controller-manager",
+            "/controller_manager",
         ],
     )
+    finger_joint_trajectory_controller = Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=[
+            "joint_trajectory_controller",
+            "--controller-manager",
+            "/controller_manager",
+        ],
+    )
+    joint_state_broadcaster = Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=[
+            "joint_state_broadcaster",
+            "--controller-manager",
+            "/controller_manager",
+        ],
+    )
+
 
     # Visualize in RViz
     rviz = Node(
@@ -128,6 +149,41 @@ def generate_launch_description():
         output='screen'
     )
 
+
+    # Planning Configuration
+    ompl_planning_pipeline_config = {
+        "move_group": {
+            "planning_plugin": "ompl_interface/OMPLPlanner",
+            "request_adapters": """default_planner_request_adapters/AddTimeOptimalParameterization default_planner_request_adapters/FixWorkspaceBounds default_planner_request_adapters/FixStartStateBounds default_planner_request_adapters/FixStartStateCollision default_planner_request_adapters/FixStartStatePathConstraints""",
+            "start_state_max_bounds_error": 0.1,
+        }
+    }
+    # MoveIt2 node
+    ompl_planning_yaml = load_yaml('ompl_planning.yaml')
+    ompl_planning_pipeline_config["move_group"].update(ompl_planning_yaml)
+
+    moveit_controllers = {
+        'moveit_controller_manager': 'moveit_simple_controller_manager/MoveItSimpleControllerManager',
+        'moveit_simple_controller_manager': load_yaml('controllers_ros_control.yaml')
+    }
+
+    moveit_node = Node(
+        package='moveit_ros_move_group',
+        executable='move_group',
+        output='screen',
+        parameters=[
+            description,
+            description_semantic,
+            description_kinematics,
+            moveit_controllers,
+            ompl_planning_pipeline_config,
+            description_joint_limits,
+            sim_time
+        ],
+        remappings=[('/joint_states', '/ovis_driver/out/joint_state')],
+    )
+    
+
     # Call launch_setup function to set up Kinova nodes
     kinova_nodes = LaunchDescription(declare_configurable_parameters(configurable_parameters) + [
         OpaqueFunction(function = launch_setup)])
@@ -136,12 +192,14 @@ def generate_launch_description():
             gz_sim,
             DeclareLaunchArgument('rviz', default_value='true', description='Open RViz.'),
             bridge,
-            #robot_state_publisher,
-            #rviz,
+            rviz,
             create,
             kinova_nodes,
-            joint_state_controller,
+            joint_trajectory_controller,
+            finger_joint_trajectory_controller,
+            joint_state_broadcaster,
             ros2_control_node,
+            #moveit_node,
             ])
 
 def launch_setup(context):

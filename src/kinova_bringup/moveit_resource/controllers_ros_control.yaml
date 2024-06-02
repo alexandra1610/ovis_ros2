@@ -21,14 +21,14 @@
 # controller_manager provides the necessary infrastructure to manage multiple controllers efficiently and robustly.
 controller_manager:
   ros__parameters:
-    update_rate: 10 
-    arm_controller:
-      type: joint_trajectory_controller/JointTrajectoryController
-    grip_controller:
-      type: joint_trajectory_controller/JointTrajectoryController
-    joint_state_broadcaster:
+    update_rate: 100 
+    ovis_joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
-effort_joint_trajectory_controller:
+    joint_trajectory_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+    joint_trajectory_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+joint_trajectory_controller:
   ros__parameters:
     joints:
       - ovis_joint_1
@@ -41,10 +41,15 @@ effort_joint_trajectory_controller:
       - position
     state_interfaces:
       - position
-    allow_integration_in_goal_trajectories: true
-effort_finger_trajectory_controller:
+    state_publish_rate: 100.0
+    action_monitor_rate: 20.0
+    allow_partial_joints_goal: false
+    constraints:
+      stopped_velocity_tolerance: 0.0
+      goal_time: 0.0
+joint_trajectory_controller:
   ros__parameters:
-    joints:
+    joint:
       - ovis_joint_end_effector
     command_interfaces:
       - position
